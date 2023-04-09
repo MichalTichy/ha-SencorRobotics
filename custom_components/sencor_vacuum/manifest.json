@@ -1,12 +1,12 @@
 {
-  "domain": "sencor_vacuum",
-  "name": "Sencor Vacuum",
-  "version": "1.0.0",
-  "documentation": "https://github.com/MichalTichy/ha-SencorVacuum",
-  "issue_tracker": "https://github.com/MichalTichy/ha-SencorVacuum/issues",
-  "codeowners": [
-    "@MichalTichy"
-  ],
-  "iot_class": "local_polling",
-  "config_flow": true
+	"domain": "sencor_vacuum",
+	"name": "Sencor Vacuum",
+	"codeowners": [
+		"@MichalTichy"
+	],
+	"config_flow": true,
+	"documentation": "https://github.com/MichalTichy/ha-SencorVacuum",
+	"iot_class": "local_polling",
+	"issue_tracker": "https://github.com/MichalTichy/ha-SencorVacuum/issues",
+	"version": "1.0.0"
 }
