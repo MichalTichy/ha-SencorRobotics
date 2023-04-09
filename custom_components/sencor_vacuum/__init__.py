@@ -1,26 +1,27 @@
-"""The Cleanmate integration."""
+"""The Sencor integration."""
 import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_HOST
-from .const import DOMAIN, CONF_AUTH_CODE
-from .devices.vacuum import CleanmateVacuum
+from .const import DOMAIN, CONF_AUTH_CODE, CONF_DEVICE_ID
+from .devices.vacuum import SencorVacuum
 
 # List of platforms to support. There should be a matching .py file for each,
 # eg <cover.py> and <sensor.py>
 PLATFORMS: list[str] = ["vacuum", "number"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Cleanmate from a config entry."""
+    """Set up Sencor from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = dict(entry.data)
 
     config = dict(entry.data)
     host = config[CONF_HOST]
     auth_code = config[CONF_AUTH_CODE]
+    device_id = config[CONF_DEVICE_ID]
 
-    device = CleanmateVacuum(host, auth_code)
+    device = SencorVacuum(host, auth_code,device_id)
 
     hass.data[DOMAIN][entry.entry_id]['device'] = device
     

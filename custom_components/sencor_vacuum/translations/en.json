@@ -5,15 +5,15 @@
         },
         "error": {
             "invalid_host": "Invalid host",
-            "invalid_auth_code": "Invalid authentication code",
             "unknown": "Unexpected error"
         },
         "step": {
             "user": {
-                "title": "Cleanmate vacuum configuration",
+                "title": "Sencor vacuum configuration",
                 "data": {
                     "host": "Host",
-                    "authCode": "Authentication code"
+                    "authCode": "Authentication code",
+                    "deviceId": "Device id"
                 }
             }
         }

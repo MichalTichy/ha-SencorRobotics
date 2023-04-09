@@ -1,33 +1,34 @@
-"""Connection flow for Cleanmate integration."""
-
+"""Connection flow for Sencor Vacuum integration."""
+import logging
 import asyncio
 import json
 from .helpers import parse_value
 
+_LOGGER = logging.getLogger(__name__)
 
 class Connection:
-    """Connection to a Cleanmate vacuum."""
-
-    port = 8888
-
+    """Connection to a vacuum."""
     host: str
     auth_code: str
+    device_id: str
 
     reader: asyncio.StreamReader
     writer: asyncio.StreamWriter
 
-    def __init__(self, host: str, auth_code: str) -> None:
+    
+    def __init__(self, host: str, auth_code: str,device_id:str) -> None:
         self.host = host
         self.auth_code = auth_code
+        self.device_id = device_id
 
     async def connect(self) -> None:
-        """Connect to the Cleanmate vacuum."""
-        self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
+        """Connect to the vacuum."""
+        self.reader, self.writer = await asyncio.open_connection(self.host, 8888)
         self.writer.write_timeout = 10
         self.writer.read_timeout = 10
 
     async def disconnect(self) -> None:
-        """Disconnect from the Cleanmate vacuum."""
+        """Disconnect from the vacuum."""
         self.writer.close()
         self.reader = None
         self.writer = None
@@ -37,32 +38,35 @@ class Connection:
         temp = f"{'0'*(8-len(size_hex))}{size_hex}"
         return "".join(map(str.__add__, temp[-2::-2], temp[-1::-2]))
 
-    async def send_request(self, data: dict[str, any]) -> None:
-        """Send a request to the Cleanmate vacuum."""
-        request = json.dumps(
-            {
-                "version": "1.0",
-                "control": {
-                    "authCode": self.auth_code,
-                },
-                "value": data,
-            },
-            separators=(",", ":"),
-        )
-
-        request_size = len(request) + 20
-        request_hex = request.encode("utf-8").hex()
+    async def send_request(self, data: dict[str, any], version:bytes = b'1.5.11') -> None:
+        """Send a request to the vacuum."""
+        
+        datastring = json.dumps(data,separators=(',', ':'))
+        body = b'{"cmd":0,"control":{"authCode":"' \
+            + str.encode(self.auth_code) \
+            + b'","deviceIp":"' + str.encode(self.host) \
+            + b'","devicePort":"8888","targetId":"' \
+            + str.encode(self.device_id) \
+            + b'","targetType":"3"},"seq":0,"value":' \
+            + str.encode(datastring)  \
+            + b',"version":"'+version+b'"}'
+        
+        request_size = len(body) + 20
         prefix = self._get_request_prefix(request_size)
-
-        packet = f"{prefix}fa00000001000000c527000001000000{request_hex}"
-        await self.send_raw_request(bytes.fromhex(packet))
+        header = bytes.fromhex(f"{prefix}fa00c8000000eb27ea27000000000000")
+        packet = header+body
+        
+        _LOGGER.debug('Sending: ' \
+            +'header: '+''.join(f'{byte:02x}' for byte in header) \
+            + ' body: '+body.decode())
+        await self.send_raw_request(packet)
 
     async def send_raw_request(self, raw_data: bytes) -> None:
-        """Send a raw request to the Cleanmate vacuum."""
+        """Send a raw request to the Sencor vacuum."""
         await self.connect()
         self.writer.write(raw_data)
         await self.writer.drain()
-
+        
     async def read_data(self, bytes: int) -> bytes:
         data = await self.reader.read(bytes)
         if(not data): 

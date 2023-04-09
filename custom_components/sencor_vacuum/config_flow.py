@@ -1,4 +1,4 @@
-"""Config flow for Cleanmate integration."""
+"""Config flow for Sencor Vacuum integration."""
 
 import logging
 from typing import Any
@@ -10,7 +10,7 @@ from homeassistant import config_entries, exceptions
 from homeassistant.core import HomeAssistant
 
 from homeassistant.const import CONF_HOST
-from .const import DOMAIN, PORT, CONF_AUTH_CODE
+from .const import DOMAIN, CONF_AUTH_CODE, CONF_DEVICE_ID
 from .helpers import host_available
 
 _LOGGER = logging.getLogger(__name__)
@@ -18,7 +18,8 @@ _LOGGER = logging.getLogger(__name__)
 DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
-        vol.Required(CONF_AUTH_CODE): vol.All(str, vol.Length(min=10, max=10)),
+        vol.Required(CONF_AUTH_CODE): str,
+        vol.Required(CONF_DEVICE_ID): str
     }
 )
 
@@ -34,17 +35,11 @@ async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, Any]:
     except ValueError as err:
         raise InvalidHost from err
 
-    if len(data[CONF_AUTH_CODE]) != 10:
-        raise InvalidAuthCode
-
-    if not host_available(data[CONF_HOST], PORT):
-        raise ErrorConnecting
-
     return data
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Cleanmate."""
+    """Handle a config flow for Sencor Vacuum."""
 
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
@@ -56,13 +51,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 info = await validate_input(self.hass, user_input)
 
-                return self.async_create_entry(title="Cleanmate", data=info)
+                return self.async_create_entry(title="Sencor Vacuum", data=info)
             except InvalidHost:
                 errors["host"] = "invalid_host"
-            except ErrorConnecting:
-                errors["host"] = "error_connecting"
-            except InvalidAuthCode:
-                errors["auth_code"] = "invalid_auth_code"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -75,11 +66,3 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class InvalidHost(exceptions.HomeAssistantError):
     """Error to indicate there is an invalid hostname."""
-
-
-class ErrorConnecting(exceptions.HomeAssistantError):
-    """Error to indicate a connection couldn't be established."""
-
-
-class InvalidAuthCode(exceptions.HomeAssistantError):
-    """Error to indicate there is an invalid auth code."""

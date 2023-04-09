@@ -1,4 +1,4 @@
-"""Support for Cleanmate Vaccums."""
+"""Support for Sencor Vaccums."""
 import logging
 from typing import Any
 import voluptuous as vol
@@ -17,19 +17,19 @@ from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.icon import icon_for_battery_level
 
 from .const import DOMAIN
-from .devices.vacuum import CleanmateVacuum, WorkMode, WorkState
+from .devices.vacuum import SencorVacuum, WorkMode, WorkState
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(hass, config_entry, async_add_entities):
-    """Set up the Cleanmate vacuums."""
+    """Set up the Sencor vacuums."""
     config = hass.data[DOMAIN][config_entry.entry_id]
     device = config["device"]
 
     vacuums = [Vacuum(device)]  # Change name
 
-    _LOGGER.debug("Adding Cleanmate Vacuums to Home Assistant: %s", vacuums)
+    _LOGGER.debug("Adding Sencor Vacuums to Home Assistant: %s", vacuums)
     async_add_entities(vacuums)
 
 
@@ -66,8 +66,8 @@ class Vacuum(StateVacuumEntity):
         "silent": WorkMode.Silent,
     }
 
-    def __init__(self, device: CleanmateVacuum) -> None:
-        """Initialize the Cleanmate vacuum cleaner"""
+    def __init__(self, device: SencorVacuum) -> None:
+        """Initialize the Sencor vacuum cleaner"""
         self.device = device
         self.device.update_state()
         self._attr_fan_speed = None
@@ -87,7 +87,7 @@ class Vacuum(StateVacuumEntity):
         return {
             "identifiers": {(DOMAIN, self.device.host)},
             "name": self.name,
-            "manufacturer": "Cleanmate",
+            "manufacturer": "Sencor",
             "sw_version": self.device.version,
         }
 
@@ -206,7 +206,6 @@ class Vacuum(StateVacuumEntity):
         await self.device.start(work_mode)
 
     async def async_update(self) -> None:
-        """Update state and map of the vacuum cleaner."""
         await self.device.update_state()
         await self.device.update_map_data()
     

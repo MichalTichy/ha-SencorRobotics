@@ -1,4 +1,4 @@
-"""A Cleanmate vacuum."""
+"""A Sencor vacuum."""
 import base64
 from enum import Enum
 from typing import Tuple
@@ -38,17 +38,15 @@ class MopMode(Enum):
 class ErrorCode(Enum):
     """The error code"""
     
-    SideBrushStuck = 104 # Sidoborsten/-arna har fastnat. Vänligen kontrollera.
-                         # Lossa och rensa borstarna från föremål/smuts. Se till att de kan rotera fritt.
-    NoContactWithFloor = 109 # Roboten har inte kontakt med golvet
-                             # Placera roboten med båda hjulen på golvet och starta på nytt.
+    SideBrushStuck = 104 
+    NoContactWithFloor = 109                            
     RearWheelOverload = 105
     Stuck = 106
     LocalizationFailed = 119
 
 
-class CleanmateVacuum(Connection):
-    """A Cleanmate vacuum."""
+class SencorVacuum(Connection):
+    """A Sencor vacuum."""
 
     # Values from state response
     battery_level: int = None
@@ -67,7 +65,7 @@ class CleanmateVacuum(Connection):
 
     async def get_state_data(self) -> dict:
         """Get state data of the vacuum."""
-        data = {"state": "", "transitCmd": "98"}
+        data = {"transitCmd":"98"}
         await self.send_request(data)
         state_data = await self.get_response()
         return state_data
@@ -191,14 +189,14 @@ class CleanmateVacuum(Connection):
             room_id_str = str(room["room_id"])
             if not any(room_id_str == x["blockNum"] for x in rooms_request):
                 rooms_request.append({
-                    "cleanNum": str(room["clean_num"]),
-                    "blockNum": room_id_str
+                    "cleanNum":str(room["clean_num"]),
+                    "blockNum":room_id_str
                 })
         data = {
-            "opCmd": "cleanBlocks",
-            "cleanBlocks": sorted(rooms_request, key=lambda x: x["blockNum"]),
+            "opCmd":"cleanBlocks",
+            "cleanBlocks":sorted(rooms_request, key=lambda x: x["blockNum"]),
         }
-        await self.send_request(data)
+        await self.send_request(data,b'2.3.1')
 
     async def find(self) -> None:
         """Announce vacuum's location"""
