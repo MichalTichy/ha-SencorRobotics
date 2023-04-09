@@ -34,7 +34,7 @@ You can use [HACS](https://hacs.xyz/) to install this component. Search for the 
 
 Add your device via the Integration menu.
 
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=sencor_vacuum)
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=sencor_robotics)
 
 
 ### Get authentifications data
@@ -63,10 +63,10 @@ Theses attributes are available to be displayed on lovelace-ui:
 - `rooms`: List of known rooms
 
 ## Available additional services
-- sencor_vacuum.clean_rooms
+- sencor_robotics.clean_rooms
     - Sends vacuum to clean selected room/s.
     ```
-    service: sencor_vacuum.clean_rooms
+    service: sencor_robotics.clean_rooms
     data:
         rooms:
             - room_id: 4

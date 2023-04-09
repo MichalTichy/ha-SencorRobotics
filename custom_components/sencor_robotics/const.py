@@ -1,6 +1,6 @@
 """Constants for the Sencor Vacuum integration."""
 
-DOMAIN = "sencor_vacuum"
+DOMAIN = "sencor_robotics"
 
 CONF_AUTH_CODE = "authCode"
 CONF_DEVICE_ID = "deviceId"
