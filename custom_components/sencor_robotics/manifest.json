@@ -1,5 +1,5 @@
 {
-	"domain": "sencor_robotics",
+	"domain": "sencor",
 	"name": "Sencor Vacuum",
 	"codeowners": [
 		"@MichalTichy"
