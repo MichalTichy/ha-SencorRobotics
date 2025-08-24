@@ -21,17 +21,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     auth_code = config[CONF_AUTH_CODE]
     device_id = config[CONF_DEVICE_ID]
 
-    device = SencorVacuum(host, auth_code,device_id)
-
+    device = SencorVacuum(host, auth_code, device_id)
     hass.data[DOMAIN][entry.entry_id]['device'] = device
-    
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, 'vacuum')
-    )
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, 'number')
-    )
+
+    # forward the entry to supported platforms; always await to avoid race conditions
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
