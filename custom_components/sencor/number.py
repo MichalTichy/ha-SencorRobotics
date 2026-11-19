@@ -37,7 +37,6 @@ class SencorVacuumVolume(NumberEntity):
     def __init__(self, device: SencorVacuum, name) -> None:
         """Initialize the Sencor vacuum cleaner"""
         self.device = device
-        self.device.update_state()
     
     @property
     def unique_id(self) -> str:

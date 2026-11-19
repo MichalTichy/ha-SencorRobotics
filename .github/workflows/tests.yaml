@@ -1,0 +1,32 @@
+name: Protocol tests
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -W error -m unittest discover -s tests -v
+  home-assistant:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - python-version: '3.13'
+            homeassistant: 'homeassistant==2025.1.0'
+          - python-version: '3.14'
+            homeassistant: 'homeassistant'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install '${{ matrix.homeassistant }}'
+      - run: python -W error -m unittest discover -s tests -v
