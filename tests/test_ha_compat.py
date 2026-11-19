@@ -9,10 +9,12 @@ from sencor_protocol_tests.devices.vacuum import WorkState
 
 HAS_HA = importlib.util.find_spec('homeassistant') is not None
 if HAS_HA:
-    # HA itself subclasses aiohttp.Application; this upstream warning is unrelated
-    # to custom integrations and otherwise prevents strict-warning test imports.
+    # Ignore known warnings in HA's dependencies only during the HA import;
+    # integration code and test execution still run with warnings as errors.
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', message='Inheritance class HomeAssistantApplication.*', category=DeprecationWarning)
+        # HA 2025.1 imports josepy's deprecated pyOpenSSL CSR type.
+        warnings.filterwarnings('ignore', message=r'CSR support in pyOpenSSL is deprecated\. You should use the APIs in cryptography\.', category=DeprecationWarning)
         from homeassistant.components.vacuum import VacuumActivity, VacuumEntityFeature
     from sencor_protocol_tests.vacuum import Vacuum
     from sencor_protocol_tests.number import SencorVacuumVolume
