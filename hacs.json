@@ -1,6 +1,6 @@
 {
-    "name": "Sencor Vacuum",
-    "content_in_root": false,
-    "render_readme": true,
-    "homeassistant": "2023.4.1"
-  }
+  "name": "Sencor Vacuum",
+  "content_in_root": false,
+  "render_readme": true,
+  "homeassistant": "2025.1.0"
+}

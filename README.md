@@ -25,7 +25,7 @@ You can use [HACS](https://hacs.xyz/) to install this component. Search for the 
 
 ### Manual installation
 
-1. Go to [releases page](https://github.com/MichalTichy/ha-SencorVacuum/releases)
+1. Go to [releases page](https://github.com/MichalTichy/ha-SencorRobotics/releases)
 2. download the last release zip
 3. unzip it on `custom_components` directory
 4. see next chapter for configuration
@@ -77,3 +77,41 @@ Theses attributes are available to be displayed on lovelace-ui:
 
 
 This integration is heavily based on [Cleanmate integration by Albinmedoc](https://github.com/albinmedoc/ha-cleanmate) and [Proscenic 790T integration by Deblockt](https://github.com/deblockt/hass-proscenic-790T-vacuum)
+## Compatibility and troubleshooting
+
+This version requires Home Assistant 2025.1 or newer. It uses the
+`VacuumActivity` API introduced in that release and preserves `battery_level`
+as a vacuum attribute for existing cards and automations.
+
+After updating the integration, restart Home Assistant and try the
+`vacuum.start` action in Developer Tools > Actions. Existing configuration
+entries do not need to be recreated.
+
+If state updates work but cleaning does not start:
+
+1. Check whether cleaning starts in the SENCOR Robotics app.
+2. Check the Home Assistant log for the error from `vacuum.start`.
+   The HA host must be able to connect to the robot on TCP port 8888.
+3. Report the robot model, firmware version, Home Assistant version, integration
+   version, and whether pause / return to dock work. If the robot IP or app
+   credentials changed, check the configured IP, device ID and authentication
+   code against a fresh capture from the app.
+4. For protocol investigation, enable debug logging for `custom_components.sencor`
+   in the Home Assistant logger configuration, reproduce one failed start, and
+   attach the relevant log excerpt to an issue. Do not publish authentication
+   codes or unredacted packet captures.
+
+The transport fixes are covered by a simulated TCP robot. A successful TCP write
+alone does not confirm that a real robot accepted a command; hardware validation
+is still required, particularly if firmware changed the command protocol.
+
+## Development tests
+
+Protocol tests use only the Python standard library (Python 3.11 or newer):
+
+```sh
+python -W error -m unittest discover -s tests -v
+```
+
+CI also runs entity contract tests against Home Assistant 2025.1 and the latest
+available release. These checks are skipped when Home Assistant is not installed.

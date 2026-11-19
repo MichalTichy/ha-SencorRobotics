@@ -1,98 +1,94 @@
-"""Connection flow for Sencor Vacuum integration."""
-import logging
+"""Local TCP connection to a Sencor vacuum."""
 import asyncio
 import json
+import logging
+from typing import Any
+
 from .helpers import parse_value
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class Connection:
-    """Connection to a vacuum."""
-    host: str
-    auth_code: str
-    device_id: str
+    """Serialize complete transactions on the vacuum's local TCP interface."""
 
-    reader: asyncio.StreamReader
-    writer: asyncio.StreamWriter
+    port = 8888
+    timeout = 10
+    header_size = 20
+    max_response_size = 16 * 1024 * 1024
 
-    
-    def __init__(self, host: str, auth_code: str,device_id:str) -> None:
+    def __init__(self, host: str, auth_code: str, device_id: str) -> None:
         self.host = host
         self.auth_code = auth_code
         self.device_id = device_id
-
-    async def connect(self) -> None:
-        """Connect to the vacuum."""
-        self.reader, self.writer = await asyncio.open_connection(self.host, 8888)
-        self.writer.write_timeout = 10
-        self.writer.read_timeout = 10
-
-    async def disconnect(self) -> None:
-        """Disconnect from the vacuum."""
-        self.writer.close()
         self.reader = None
         self.writer = None
+        self._request_lock = asyncio.Lock()
+
+    async def connect(self) -> None:
+        """Connect within the transaction timeout."""
+        self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
+
+    async def disconnect(self) -> None:
+        """Release the socket, including after failed or cancelled requests."""
+        writer = self.writer
+        self.reader = self.writer = None
+        if writer is not None:
+            writer.close()
+            try:
+                await asyncio.wait_for(writer.wait_closed(), self.timeout)
+            except (OSError, TimeoutError):
+                _LOGGER.debug("Error closing vacuum connection", exc_info=True)
 
     def _get_request_prefix(self, size: int) -> str:
-        size_hex = "{0:x}".format(size)
-        temp = f"{'0'*(8-len(size_hex))}{size_hex}"
-        return "".join(map(str.__add__, temp[-2::-2], temp[-1::-2]))
+        return size.to_bytes(4, "little").hex()
 
-    async def send_request(self, data: dict[str, any], version:bytes = b'1.5.11') -> None:
-        """Send a request to the vacuum."""
-        
-        datastring = json.dumps(data,separators=(',', ':'))
-        body = b'{"cmd":0,"control":{"authCode":"' \
-            + str.encode(self.auth_code) \
-            + b'","deviceIp":"' + str.encode(self.host) \
-            + b'","devicePort":"8888","targetId":"' \
-            + str.encode(self.device_id) \
-            + b'","targetType":"3"},"seq":0,"value":' \
-            + str.encode(datastring)  \
-            + b',"version":"'+version+b'"}'
-        
-        request_size = len(body) + 20
-        prefix = self._get_request_prefix(request_size)
+    async def send_request(
+        self, data: dict[str, Any], version: bytes = b"1.5.11",
+        *, expect_response: bool = False,
+    ) -> Any:
+        """Send a command or perform an atomic query and response exchange."""
+        body = json.dumps({
+            "cmd": 0,
+            "control": {
+                "authCode": self.auth_code,
+                "deviceIp": self.host,
+                "devicePort": str(self.port),
+                "targetId": self.device_id,
+                "targetType": "3",
+            },
+            "seq": 0,
+            "value": data,
+            "version": version.decode("ascii"),
+        }, separators=(",", ":")).encode("utf-8")
+        prefix = self._get_request_prefix(len(body) + self.header_size)
         header = bytes.fromhex(f"{prefix}fa00c8000000eb27ea27000000000000")
-        packet = header+body
-        
-        _LOGGER.debug('Sending: ' \
-            +'header: '+''.join(f'{byte:02x}' for byte in header) \
-            + ' body: '+body.decode())
-        await self.send_raw_request(packet)
+        # Never log the packet body: it contains the authentication code.
+        _LOGGER.debug("Sending vacuum request (%s bytes)", len(header) + len(body))
+        async with self._request_lock:
+            try:
+                async with asyncio.timeout(self.timeout):
+                    await self.send_raw_request(header + body)
+                    if expect_response:
+                        return await self.get_response()
+            finally:
+                await self.disconnect()
 
     async def send_raw_request(self, raw_data: bytes) -> None:
-        """Send a raw request to the Sencor vacuum."""
+        """Write a packet inside a serialized transaction."""
         await self.connect()
         self.writer.write(raw_data)
         await self.writer.drain()
-        
-    async def read_data(self, bytes: int) -> bytes:
-        data = await self.reader.read(bytes)
-        if(not data): 
-            raise ConnectionError
-        return data
-    
-    async def get_response(self):
-        try:
-            # Read size from header
-            header = await self.read_data(20)
 
-            raw_size_hex = header[:4].hex()
+    async def read_data(self, size: int) -> bytes:
+        """Read an exact frame fragment, regardless of TCP segmentation."""
+        return await self.reader.readexactly(size)
 
-            # Reverse the order pairwise
-            size_hex: str = "".join(
-                map(str.__add__, raw_size_hex[-2::-2], raw_size_hex[-1::-2])
-            )
-            size = (
-                int(size_hex, base=16) - len(header)
-            )  # Minus the header that we already gathered
-
-            # Read actual data
-            data = b""
-            while len(data) < size:
-                data += await self.read_data(size)
-            response = parse_value(data.decode("ascii"))
-            return response
-        except asyncio.TimeoutError as err:
-            raise err
+    async def get_response(self) -> Any:
+        """Read one length-prefixed response inside the transaction timeout."""
+        header = await self.read_data(self.header_size)
+        size = int.from_bytes(header[:4], "little") - self.header_size
+        if not 0 < size <= self.max_response_size:
+            raise ValueError(f"Invalid vacuum response size: {size}")
+        data = await self.read_data(size)
+        return parse_value(data.decode("utf-8"))

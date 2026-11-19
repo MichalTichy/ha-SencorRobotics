@@ -66,9 +66,7 @@ class SencorVacuum(Connection):
     async def get_state_data(self) -> dict:
         """Get state data of the vacuum."""
         data = {"transitCmd":"98"}
-        await self.send_request(data)
-        state_data = await self.get_response()
-        return state_data
+        return await self.send_request(data, expect_response=True)
 
     async def update_state(self) -> None:
         """Get and update state of the vacuum."""
@@ -105,9 +103,7 @@ class SencorVacuum(Connection):
             "mapSign": "AAA=",
             "transitCmd": "133",
         }
-        await self.send_request(data)
-        map_data = await self.get_response()
-        return map_data
+        return await self.send_request(data, expect_response=True)
     
     async def update_map_data(self) -> None:
         """Get and update map data of the vacuum."""

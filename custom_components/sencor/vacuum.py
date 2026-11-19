@@ -6,11 +6,7 @@ import voluptuous as vol
 from homeassistant.components.vacuum import (
     StateVacuumEntity,
     VacuumEntityFeature,
-    STATE_IDLE,
-    STATE_CLEANING,
-    STATE_DOCKED,
-    STATE_PAUSED,
-    STATE_ERROR,
+    VacuumActivity,
 )
 
 from homeassistant.helpers import config_validation as cv, entity_platform
@@ -69,7 +65,6 @@ class Vacuum(StateVacuumEntity):
     def __init__(self, device: SencorVacuum) -> None:
         """Initialize the Sencor vacuum cleaner"""
         self.device = device
-        self.device.update_state()
         self._attr_fan_speed = None
         self._attr_error = None
 
@@ -92,23 +87,23 @@ class Vacuum(StateVacuumEntity):
         }
 
     @property
-    def state(self) -> str:
+    def activity(self) -> VacuumActivity | None:
         """Return the state of the vacuum cleaner."""
         current_work_state = self.device.work_state
         if current_work_state is WorkState.Cleaning:
-            return STATE_CLEANING
+            return VacuumActivity.CLEANING
         if current_work_state is WorkState.Idle:
             if self.device.had_work:
-                return STATE_PAUSED
-            return STATE_IDLE
+                return VacuumActivity.PAUSED
+            return VacuumActivity.IDLE
         if current_work_state is WorkState.Returning:
-            return STATE_IDLE
+            return VacuumActivity.RETURNING
         if current_work_state in [WorkState.Docked, WorkState.Charging] :
-            return STATE_DOCKED
-        if current_work_state is WorkState.Problem:
-            return STATE_ERROR
+            return VacuumActivity.DOCKED
+        if current_work_state in (WorkState.Problem, WorkState.Error):
+            return VacuumActivity.ERROR
         _LOGGER.debug("Unkown work_state %s", current_work_state)
-        return STATE_DOCKED
+        return None
 
     @property
     def battery_level(self) -> int:
@@ -152,10 +147,8 @@ class Vacuum(StateVacuumEntity):
             | VacuumEntityFeature.STOP
             | VacuumEntityFeature.RETURN_HOME
             | VacuumEntityFeature.FAN_SPEED
-            | VacuumEntityFeature.BATTERY
             | VacuumEntityFeature.LOCATE
             | VacuumEntityFeature.STATE
-            | VacuumEntityFeature.STATUS
             | VacuumEntityFeature.START
         )
     
@@ -175,6 +168,7 @@ class Vacuum(StateVacuumEntity):
         """Return the state attributes of the vacuum cleaner."""
         # Add room ids, progress, etc
         return {
+            "battery_level": self.battery_level,
             "charger_position": self.device.charger_position,
             "robot_position": self.device.robot_position,
             "rooms": self.rooms
