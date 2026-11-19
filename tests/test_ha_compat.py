@@ -13,8 +13,12 @@ if HAS_HA:
     # integration code and test execution still run with warnings as errors.
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', message='Inheritance class HomeAssistantApplication.*', category=DeprecationWarning)
-        # HA 2025.1 imports josepy's deprecated pyOpenSSL CSR type.
-        warnings.filterwarnings('ignore', message=r'CSR support in pyOpenSSL is deprecated\. You should use the APIs in cryptography\.', category=DeprecationWarning)
+        # HA 2025.1's acme/josepy dependencies import deprecated pyOpenSSL
+        # certificate types. Keep this exception scoped to those dependencies.
+        warnings.filterwarnings(
+            'ignore', message=r'.*support in pyOpenSSL is deprecated\.',
+            category=DeprecationWarning, module=r'(acme|josepy)(\.|$)',
+        )
         from homeassistant.components.vacuum import VacuumActivity, VacuumEntityFeature
     from sencor_protocol_tests.vacuum import Vacuum
     from sencor_protocol_tests.number import SencorVacuumVolume
