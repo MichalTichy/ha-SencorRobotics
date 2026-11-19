@@ -20,6 +20,7 @@ if HAS_HA:
             category=DeprecationWarning, module=r'(acme|josepy)(\.|$)',
         )
         from homeassistant.components.vacuum import VacuumActivity, VacuumEntityFeature
+    from homeassistant.const import STATE_UNKNOWN
     from sencor_protocol_tests.vacuum import Vacuum
     from sencor_protocol_tests.number import SencorVacuumVolume
 
@@ -46,7 +47,12 @@ class EntityTests(unittest.IsolatedAsyncioTestCase):
         for state, activity in cases.items():
             self.device.work_state = state
             self.assertEqual(self.vacuum.activity, activity)
-            self.assertEqual(self.vacuum.state, activity)
+            if activity is None:
+                # HA 2025.1 maps a missing activity to STATE_UNKNOWN; newer
+                # versions leave it as None for the entity state machinery.
+                self.assertIn(self.vacuum.state, (None, STATE_UNKNOWN))
+            else:
+                self.assertEqual(self.vacuum.state, activity)
         self.device.work_state = WorkState.Idle
         self.device.had_work = True
         self.assertEqual(self.vacuum.state, VacuumActivity.PAUSED)
